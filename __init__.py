@@ -32,7 +32,12 @@ class Destination(object):
 
     @property
     def mounted(self):
-        # если директория не читабельная - она не монтируема
+        # return true if '[Errno 5] Input/output error' (probably mounted but not readable)
+        try:
+            os.stat(self.dir)
+        except OSError as error:
+            if error.errno==5:
+                return True
         return os.path.ismount(self.dir)
 
     @property
@@ -114,15 +119,20 @@ if __name__=='__main__':
     if device:
         if dst.canBeMounted:
             subprocess.check_call('jmtpfs "%s" -device=%s,%s' % (dst.dirCreated, device[0], device[1]), shell=True)
-        fpid = os.fork()
-        if fpid!=0:
-            # Running as daemon now. PID is fpid
+        else:
+            print "Can't be mounted to %s" % dst.dir
+            sys.exit(1)
+        fork_pid = os.fork()
+        if fork_pid!=0:
+            print 'Going to background with pid: %s' % fork_pid
             sys.exit(0)
         while dst.mounted:
-            time.sleep(1)
+            time.sleep(2)
             d = JMTPFS().getDeviceById(device[2], device[3])
             if not d:
                 subprocess.check_call('fusermount -u "%s"' % dst.dir, shell=True)
                 if dst.canBeRemoved:
                     os.rmdir(dst.dir)
-
+    else:
+        print 'No devices found!'
+        sys.exit(1)
