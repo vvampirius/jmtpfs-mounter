@@ -2,14 +2,10 @@
 # -*- coding: utf-8 -*-
 #
 # requirements: jmtpfs
-#
-# примонтировать, уйти в бэкграунд, ждать отмонтирования
 
 import subprocess
 import re
 import os
-import time
-import sys
 
 
 class Destination(object):
@@ -113,9 +109,19 @@ class JMTPFS(object):
 
 
 if __name__=='__main__':
-    #TODO: запуск через опт
-    dst = Destination('nexus5')
-    device = JMTPFS().getDeviceByName('Nexus 4/5/7/10 (MTP)')
+    import time
+    import sys
+    import argparse
+
+    args = argparse.ArgumentParser(description='Mount device with jmtpfs, fork to background and wait for disconnect/unmount.')
+    args.add_argument('-n', dest='name', help='Device name. (default: "Nexus 4/5/7/10 (MTP)")', default='Nexus 4/5/7/10 (MTP)')
+    args.add_argument('-f', dest='foreground', help="Don't go to background.", default=False, action="store_true")
+    args.add_argument('destination', help='Destination directory. (default: nexus5)', nargs='?', default='nexus5')
+    arguments = args.parse_args()
+
+    dst = Destination(arguments.destination)
+    device = JMTPFS().getDeviceByName(arguments.name)
+
     if device:
         if dst.canBeMounted:
             subprocess.check_call('jmtpfs "%s" -device=%s,%s' % (dst.dirCreated, device[0], device[1]), shell=True)
